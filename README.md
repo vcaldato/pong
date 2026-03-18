@@ -1,6 +1,6 @@
 # 🏓 Pong
 
-Jogo Pong clássico feito em Python com Pygame, organizado em classes.
+Jogo Pong clássico feito em Python com Pygame, organizado em classes desacopladas.
 
 ---
 
@@ -8,7 +8,7 @@ Jogo Pong clássico feito em Python com Pygame, organizado em classes.
 
 ```bash
 pip install pygame
-py pong.py
+python pong.py
 ```
 
 **Controles:** `↑` / `↓` para mover a raquete. O adversário é controlado por IA.
@@ -28,60 +28,86 @@ Ao encerrar, o jogo volta automaticamente para o menu.
 
 ## Estrutura do código
 
-O código é dividido em 5 classes. Cada uma cuida de uma parte do jogo.
+```
+pong.py
+ ├── Raquete   — posição, movimento e colisão da raquete
+ ├── Bola      — posição, movimento e colisão da bola
+ ├── Placar    — pontuação e condição de vitória
+ ├── Jogo      — loop principal, une todas as classes
+ └── Menu      — tela inicial
+```
 
 ---
 
+## Classes
+
 ### `Raquete`
 
-Representa uma raquete na tela.
+Representa uma raquete. Recebe posição e tamanho no construtor, sem depender de nenhuma outra classe.
 
-- Guarda a posição (`x`, `y`), tamanho e velocidade
-- `mover_cima()` e `mover_baixo()` movem a raquete respeitando os limites da tela
-- `seguir_bola()` é usado pela IA: compara o centro da raquete com a posição da bola e move na direção certa
-- `rect()` retorna o retângulo de colisão, usado para detectar se a bola bateu
+- `mover_cima()` / `mover_baixo()` — move respeitando os limites da tela
+- `seguir_bola(bola_x, bola_y)` — lógica da IA. Recebe apenas as coordenadas da bola, não o objeto `Bola` inteiro, então a `Raquete` não depende de como a `Bola` é implementada internamente
+- `rect()` — retorna o retângulo de colisão
 
 ---
 
 ### `Bola`
 
-Representa a bola e controla seu movimento.
+Representa a bola. Recebe as dimensões da tela no construtor em vez de usar constantes globais, o que a torna reutilizável em qualquer tamanho de janela.
 
-- `reset()` recoloca a bola no centro da tela com velocidade padrão — chamado no início e após cada ponto
-- `mover()` atualiza a posição a cada frame e rebate nas bordas de cima e baixo invertendo `vy`
-- `rect()` retorna o retângulo de colisão
+Todos os atributos internos (`vx`, `vy`, `x`, `y`) são acessados apenas por métodos, impedindo que outras classes dependam deles diretamente:
+
+- `mover()` — atualiza posição e rebate no teto/chão
+- `rebater_horizontal(para_direita)` — inverte a direção horizontal de forma segura. Usa `abs()` para garantir que a bola nunca fique presa dentro de uma raquete
+- `saiu_pela_esquerda()` / `saiu_pela_direita()` — informa se a bola saiu da tela
+- `posicao()` — retorna `(x, y)` sem expor os atributos diretamente
+- `reset()` — recoloca a bola no centro após um ponto
 
 ---
 
 ### `Placar`
 
-Guarda e exibe a pontuação.
+Guarda a pontuação e os limites de vitória. Os limites (`10` e `2`) são definidos aqui, não espalhados pelo `Jogo`.
 
-- Mantém `player1` e `player2` como contadores simples
-- `desenhar()` renderiza o placar no topo central da tela
+- `ponto_player1()` / `ponto_player2()` — incrementa a pontuação
+- `alguem_venceu()` — retorna `True` se algum jogador atingiu o limite
+- `desenhar()` — renderiza o placar no topo da tela
 
 ---
 
 ### `Jogo`
 
-Classe principal que une tudo e roda o loop do jogo.
+Orquestra o loop principal. Não acessa atributos internos de nenhuma classe — só chama métodos.
 
-- `processar_eventos()` — fecha o jogo se o usuário clicar no X
-- `processar_input()` — lê as setas do teclado e move o player 1
-- `verificar_colisoes()` — detecta se a bola bateu em alguma raquete e inverte a direção horizontal. Usa `abs()` para garantir que a bola sempre saia na direção correta, evitando que ela fique presa dentro da raquete
-- `verificar_pontuacao()` — checa se a bola saiu pela esquerda ou direita, atribui o ponto e verifica se alguém venceu
-- `desenhar()` — limpa a tela e desenha todos os elementos
-- `executar()` — loop principal: processa input → move → colisão → pontuação → desenha → 60 FPS
+A cada frame, na ordem:
+
+1. `processar_eventos()` — verifica se o usuário fechou a janela
+2. `processar_input()` — lê o teclado e move o player 1
+3. `seguir_bola()` — move a IA passando apenas a posição da bola
+4. `bola.mover()` — atualiza a posição da bola
+5. `verificar_colisoes()` — checa se a bola bateu em alguma raquete
+6. `verificar_pontuacao()` — checa se alguém fez ponto ou venceu
+7. `desenhar()` — limpa a tela e desenha tudo
+8. `clock.tick(60)` — limita a 60 frames por segundo
 
 ---
 
 ### `Menu`
 
-Exibe a tela inicial.
+Exibe a tela inicial e aguarda `ESPAÇO` para começar. Não conhece nenhuma outra classe do jogo.
 
-- Mostra o título "Pong" e uma mensagem piscante
-- O efeito de piscar usa `pygame.time.get_ticks() % 2000 < 1000`: nos primeiros 1000ms do ciclo o texto aparece, nos 1000ms seguintes some
-- Aguarda o jogador pressionar `ESPAÇO` para iniciar
+- O efeito de piscar usa `pygame.time.get_ticks() % 2000 < 1000`: nos primeiros 1000ms o texto aparece, nos 1000ms seguintes some
+
+---
+
+## Por que as classes são desacopladas?
+
+| Situação                                    | O que muda                                    |
+| ------------------------------------------- | --------------------------------------------- |
+| Renomear `bola.vx` para `bola.velocidade_x` | Só dentro de `Bola`                           |
+| Mudar os limites de vitória                 | Só em `Placar`                                |
+| Trocar a lógica da IA                       | Só em `Raquete.seguir_bola()`                 |
+| Mudar o tamanho da janela                   | Só as constantes `LARGURA` e `ALTURA` no topo |
 
 ---
 
