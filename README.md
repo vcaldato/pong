@@ -8,7 +8,7 @@ Jogo Pong clássico feito em Python com Pygame, organizado em classes.
 
 ```bash
 pip install pygame
-python pong.py
+py pong.py
 ```
 
 **Controles:** `↑` / `↓` para mover a raquete. O adversário é controlado por IA.
