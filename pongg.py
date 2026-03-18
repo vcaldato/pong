@@ -13,33 +13,31 @@ ALTURA = 600
 
 
 class Raquete:
-    def __init__(self, x, y):
+    def __init__(self, x, y, largura, altura):
         self.x = x
         self.y = y
-        self.largura = 10
-        self.altura = 60
+        self.largura = largura
+        self.altura = altura
         self.velocidade = 5
 
-    def mover_cima(self):
-        # Impede sair pela borda de cima
-        if self.y > 0:
+    def mover_cima(self, limite_topo=0):
+        if self.y > limite_topo:
             self.y -= self.velocidade
 
-    def mover_baixo(self):
+    def mover_baixo(self, limite_base=ALTURA):
         # Impede sair pela borda de baixo
-        if self.y < ALTURA - self.altura:
+        if self.y < limite_base - self.altura:
             self.y += self.velocidade
 
-    def seguir_bola(self, bola):
-        # IA: move o centro da raquete em direção à bola
+    def seguir_bola(self, bola_x, bola_y):
+        # IA: recebe a posição da bola em vez de depender do objeto Bola
         centro = self.y + self.altura // 2
-        if centro < bola.y:
+        if centro < bola_y:
             self.mover_baixo()
-        elif centro > bola.y:
+        elif centro > bola_y:
             self.mover_cima()
 
     def rect(self):
-        # Retorna o retângulo de colisão da raquete
         return pygame.Rect(self.x, self.y, self.largura, self.altura)
 
     def desenhar(self, tela):
@@ -47,14 +45,17 @@ class Raquete:
 
 
 class Bola:
-    def __init__(self):
+    def __init__(self, largura_tela, altura_tela):
+        # Recebe as dimensões da tela em vez de usar constantes globais
+        self.largura_tela = largura_tela
+        self.altura_tela = altura_tela
         self.tamanho = 7
         self.reset()
 
     def reset(self):
         # Volta a bola para o centro com velocidade padrão
-        self.x = LARGURA // 2 - self.tamanho // 2
-        self.y = ALTURA // 2 - self.tamanho // 2
+        self.x = self.largura_tela // 2 - self.tamanho // 2
+        self.y = self.altura_tela // 2 - self.tamanho // 2
         self.vx = 5
         self.vy = 5
 
@@ -63,11 +64,25 @@ class Bola:
         self.y += self.vy
 
         # Rebate na borda de cima e de baixo
-        if self.y <= 0 or self.y >= ALTURA - self.tamanho:
+        if self.y <= 0 or self.y >= self.altura_tela - self.tamanho:
             self.vy = -self.vy
 
+    def rebater_horizontal(self, para_direita: bool):
+        # Inverte a direção horizontal de forma segura
+        # abs() garante que a bola nunca fique presa dentro de uma raquete
+        self.vx = abs(self.vx) if para_direita else -abs(self.vx)
+
+    def saiu_pela_esquerda(self):
+        return self.x <= 0
+
+    def saiu_pela_direita(self):
+        return self.x >= self.largura_tela - self.tamanho
+
+    def posicao(self):
+        # Expõe a posição sem dar acesso direto aos atributos internos
+        return self.x, self.y
+
     def rect(self):
-        # Retorna o retângulo de colisão da bola
         return pygame.Rect(self.x, self.y, self.tamanho, self.tamanho)
 
     def desenhar(self, tela):
@@ -75,10 +90,22 @@ class Bola:
 
 
 class Placar:
-    def __init__(self):
+    def __init__(self, limite_player1, limite_player2):
+        # Limites de vitória ficam no Placar, não espalhados pelo Jogo
         self.player1 = 0
         self.player2 = 0
+        self.limite_player1 = limite_player1
+        self.limite_player2 = limite_player2
         self.font = pygame.font.SysFont(None, 36)
+
+    def ponto_player1(self):
+        self.player1 += 1
+
+    def ponto_player2(self):
+        self.player2 += 1
+
+    def alguem_venceu(self):
+        return self.player1 >= self.limite_player1 or self.player2 >= self.limite_player2
 
     def desenhar(self, tela):
         # Exibe "pontos_p1 - pontos_p2" no topo central da tela
@@ -92,10 +119,10 @@ class Jogo:
         self.clock = pygame.time.Clock()
 
         # Player 1 à esquerda, Player 2 (IA) à direita
-        self.player1 = Raquete(15, ALTURA // 2 - 30)
-        self.player2 = Raquete(LARGURA - 25, ALTURA // 2 - 30)
-        self.bola = Bola()
-        self.placar = Placar()
+        self.player1 = Raquete(15, ALTURA // 2 - 30, 10, 60)
+        self.player2 = Raquete(LARGURA - 25, ALTURA // 2 - 30, 10, 60)
+        self.bola = Bola(LARGURA, ALTURA)
+        self.placar = Placar(limite_player1=10, limite_player2=2)
 
     def processar_eventos(self):
         # Fecha o jogo se o usuário clicar no X da janela
@@ -113,29 +140,23 @@ class Jogo:
             self.player1.mover_baixo()
 
     def verificar_colisoes(self):
-        # Rebate a bola ao colidir com alguma raquete
-        # abs() garante que a bola sempre saia na direção certa
+        # Usa métodos da Bola para rebater — Jogo não acessa vx/vy diretamente
         if self.bola.rect().colliderect(self.player1.rect()):
-            self.bola.vx = abs(self.bola.vx)   # empurra para a direita
+            self.bola.rebater_horizontal(para_direita=True)
         if self.bola.rect().colliderect(self.player2.rect()):
-            self.bola.vx = -abs(self.bola.vx)  # empurra para a esquerda
+            self.bola.rebater_horizontal(para_direita=False)
 
     def verificar_pontuacao(self):
-        # Bola saiu pela esquerda: ponto para a IA
-        if self.bola.x <= 0:
-            self.placar.player2 += 1
+        # Usa métodos da Bola e do Placar — sem acessar atributos internos
+        if self.bola.saiu_pela_esquerda():
+            self.placar.ponto_player2()
             self.bola.reset()
-            if self.placar.player2 >= 2:
-                return True  # IA venceu, encerra o jogo
 
-        # Bola saiu pela direita: ponto para o jogador
-        if self.bola.x >= LARGURA - self.bola.tamanho:
-            self.placar.player1 += 1
+        elif self.bola.saiu_pela_direita():
+            self.placar.ponto_player1()
             self.bola.reset()
-            if self.placar.player1 >= 10:
-                return True  # Jogador venceu, encerra o jogo
 
-        return False
+        return self.placar.alguem_venceu()
 
     def desenhar(self):
         self.tela.fill(PRETO)
@@ -149,7 +170,11 @@ class Jogo:
         while True:
             self.processar_eventos()
             self.processar_input()
-            self.player2.seguir_bola(self.bola)  # move a IA
+
+            # IA recebe apenas a posição, não o objeto Bola inteiro
+            bola_x, bola_y = self.bola.posicao()
+            self.player2.seguir_bola(bola_x, bola_y)
+
             self.bola.mover()
             self.verificar_colisoes()
             if self.verificar_pontuacao():
