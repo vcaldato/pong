@@ -1,121 +1,124 @@
-# 🏓 Pong
-
-Jogo Pong clássico feito em Python com Pygame, organizado em classes desacopladas.
-
+# 🏓 Pong — Refatorado
+ 
+Projeto do clássico jogo Pong desenvolvido em Python com Pygame, refatorado com foco em boas práticas de engenharia de software.
+ 
 ---
-
-## Como executar
-
+ 
+## 📁 Estrutura de Arquivos
+ 
+```
+pong/
+├── main.py            # Ponto de entrada — inicialização e loop principal
+├── constants.py       # Centraliza todas as constantes do jogo
+├── interfaces.py      # Define protocolos/contratos (ISP, DIP)
+├── bola.py            # Entidade Bola — física e colisão
+├── raquete.py         # Entidade Raquete + estratégia de IA
+├── placar.py          # Pontuação e condição de vitória
+├── input_handler.py   # Leitura de teclado e tradução em comandos
+├── renderer.py        # Orquestra o ciclo de desenho
+├── jogo.py            # Cena da partida — coordena o loop
+└── menu.py            # Cena do menu inicial
+```
+ 
+---
+ 
+## ▶️ Como Executar
+ 
 ```bash
 pip install pygame
-python pong.py
+python main.py
 ```
-
-**Controles:** `↑` / `↓` para mover a raquete. O adversário é controlado por IA.
-
+ 
+**Controles:** setas `↑` / `↓` movem a raquete do player 1.
+ 
 ---
-
-## Condições de vitória
-
-| Jogador           | Condição         |
-| ----------------- | ---------------- |
-| Player 1 (humano) | Marcar 10 pontos |
-| Player 2 (IA)     | Marcar 2 pontos  |
-
-Ao encerrar, o jogo volta automaticamente para o menu.
-
+ 
+## 🔍 Critérios de Refatoração
+ 
+### Abstração
+ 
+- `interfaces.py` declara protocolos estruturais (`Desenhavel`, `Movel`, `Controlavel`, `Cena`) usando `typing.Protocol` — duck-typing sem herança explícita.
+- `Bola.posicao()` expõe apenas `(x, y)` como tupla, sem dar acesso direto aos atributos internos `vx` e `vy`.
+- `Bola.rebater_horizontal(para_direita)` encapsula a lógica de inversão de velocidade — `Jogo` não precisa conhecer o atributo `vx`.
+- `EstrategiaIA` (protocolo em `raquete.py`) permite trocar a inteligência artificial sem alterar a classe `Raquete`.
+ 
 ---
-
-## Estrutura do código
-
+ 
+### Separação de Responsabilidades
+ 
+| Responsabilidade | Código Original | Refatorado para |
+|---|---|---|
+| Leitura do teclado | `Jogo.processar_input()` | `InputHandler` |
+| Decisão de movimento da IA | `Raquete.seguir_bola()` | `IASimples` |
+| Renderização | `Jogo.desenhar()` | `Renderer` |
+| Condição de vitória | `Placar.alguem_venceu()` | Mantido em `Placar` |
+| Constantes globais | Espalhadas em vários lugares | `constants.py` |
+| Contratos/interfaces | Inexistente | `interfaces.py` |
+ 
+---
+ 
+### Princípios SOLID
+ 
+**S — Single Responsibility**
+Cada módulo tem uma única razão para mudar. `renderer.py` muda apenas se a lógica de desenho mudar. `input_handler.py` muda apenas se o esquema de controles mudar.
+ 
+**O — Open/Closed**
+`Raquete.mover_com_ia()` recebe uma `EstrategiaIA` por parâmetro. Para criar uma IA mais difícil, basta criar uma nova classe sem modificar `Raquete` ou `Jogo`:
+ 
+```python
+class IADificil:
+    def calcular_movimento(self, raquete_y, raquete_altura, bola_x, bola_y) -> int:
+        # lógica preditiva aqui
+        ...
 ```
-pong.py
- ├── Raquete   — posição, movimento e colisão da raquete
- ├── Bola      — posição, movimento e colisão da bola
- ├── Placar    — pontuação e condição de vitória
- ├── Jogo      — loop principal, une todas as classes
- └── Menu      — tela inicial
+ 
+**L — Liskov Substitution**
+Qualquer implementação de `EstrategiaIA` pode substituir `IASimples` sem quebrar o sistema. O contrato de assinatura e semântica de retorno é preservado por design.
+ 
+**I — Interface Segregation**
+Os protocolos em `interfaces.py` são granulares: `Desenhavel` exige apenas `desenhar()`, `Resetavel` exige apenas `reset()`. Nenhuma classe implementa métodos que não usa.
+ 
+**D — Dependency Inversion**
+- `Renderer` depende da lista de `Desenhavel`, não de `Raquete`, `Bola` ou `Placar` concretos.
+- `Bola` e `Raquete` recebem as dimensões da tela pelo construtor, sem ler variáveis globais.
+ 
+---
+ 
+### Legibilidade
+ 
+- Métodos com nomes semânticos: `saiu_pela_esquerda()`, `rebater_horizontal()`, `alguem_venceu()`.
+- Atributos privados prefixados com `_` (`_ia`, `_renderer`, `_input`) sinalizam que não fazem parte da API pública.
+- Nenhum método ultrapassa 20 linhas.
+- Constantes nomeadas (`PISCAR_CICLO_MS`, `RAQUETE_MARGEM`) substituem literais mágicos espalhados pelo código.
+ 
+---
+ 
+### Documentação
+ 
+Todos os módulos, classes e métodos públicos possuem docstrings descrevendo o propósito, os parâmetros e os princípios SOLID aplicados. Exemplo:
+ 
+```python
+def rebater_horizontal(self, para_direita: bool) -> None:
+    """
+    Inverte a componente horizontal da velocidade de forma segura.
+ 
+    O uso de abs() garante que a bola nunca fique presa dentro
+    de uma raquete ao receber dois rebates consecutivos.
+    """
 ```
-
+ 
 ---
-
-## Classes
-
-### `Raquete`
-
-Representa uma raquete. Recebe posição e tamanho no construtor, sem depender de nenhuma outra classe.
-
-- `mover_cima()` / `mover_baixo()` — move respeitando os limites da tela
-- `seguir_bola(bola_x, bola_y)` — lógica da IA. Recebe apenas as coordenadas da bola, não o objeto `Bola` inteiro, então a `Raquete` não depende de como a `Bola` é implementada internamente
-- `rect()` — retorna o retângulo de colisão
-
+ 
+## 📊 Comparativo: Antes × Depois
+ 
+| Critério | Antes | Depois |
+|---|---|---|
+| Arquivos | 1 | 10 |
+| Constantes globais espalhadas | Sim | Não — centralizadas em `constants.py` |
+| Acoplamento `Jogo` ↔ `Bola` | Alto (acessa `vx`, `vy` diretamente) | Baixo (apenas `posicao()`) |
+| Testabilidade | Baixa | Alta — injeção de dependência |
+| Extensibilidade da IA | Requer editar `Raquete` | Criar nova classe |
+| Docstrings | Nenhuma | 100% dos módulos e métodos |
+| Type hints | Parcial | Completo |
+ 
 ---
-
-### `Bola`
-
-Representa a bola. Recebe as dimensões da tela no construtor em vez de usar constantes globais, o que a torna reutilizável em qualquer tamanho de janela.
-
-Todos os atributos internos (`vx`, `vy`, `x`, `y`) são acessados apenas por métodos, impedindo que outras classes dependam deles diretamente:
-
-- `mover()` — atualiza posição e rebate no teto/chão
-- `rebater_horizontal(para_direita)` — inverte a direção horizontal de forma segura. Usa `abs()` para garantir que a bola nunca fique presa dentro de uma raquete
-- `saiu_pela_esquerda()` / `saiu_pela_direita()` — informa se a bola saiu da tela
-- `posicao()` — retorna `(x, y)` sem expor os atributos diretamente
-- `reset()` — recoloca a bola no centro após um ponto
-
----
-
-### `Placar`
-
-Guarda a pontuação e os limites de vitória. Os limites (`10` e `2`) são definidos aqui, não espalhados pelo `Jogo`.
-
-- `ponto_player1()` / `ponto_player2()` — incrementa a pontuação
-- `alguem_venceu()` — retorna `True` se algum jogador atingiu o limite
-- `desenhar()` — renderiza o placar no topo da tela
-
----
-
-### `Jogo`
-
-Orquestra o loop principal. Não acessa atributos internos de nenhuma classe — só chama métodos.
-
-A cada frame, na ordem:
-
-1. `processar_eventos()` — verifica se o usuário fechou a janela
-2. `processar_input()` — lê o teclado e move o player 1
-3. `seguir_bola()` — move a IA passando apenas a posição da bola
-4. `bola.mover()` — atualiza a posição da bola
-5. `verificar_colisoes()` — checa se a bola bateu em alguma raquete
-6. `verificar_pontuacao()` — checa se alguém fez ponto ou venceu
-7. `desenhar()` — limpa a tela e desenha tudo
-8. `clock.tick(60)` — limita a 60 frames por segundo
-
----
-
-### `Menu`
-
-Exibe a tela inicial e aguarda `ESPAÇO` para começar. Não conhece nenhuma outra classe do jogo.
-
-- O efeito de piscar usa `pygame.time.get_ticks() % 2000 < 1000`: nos primeiros 1000ms o texto aparece, nos 1000ms seguintes some
-
----
-
-## Por que as classes são desacopladas?
-
-| Situação                                    | O que muda                                    |
-| ------------------------------------------- | --------------------------------------------- |
-| Renomear `bola.vx` para `bola.velocidade_x` | Só dentro de `Bola`                           |
-| Mudar os limites de vitória                 | Só em `Placar`                                |
-| Trocar a lógica da IA                       | Só em `Raquete.seguir_bola()`                 |
-| Mudar o tamanho da janela                   | Só as constantes `LARGURA` e `ALTURA` no topo |
-
----
-
-## Fluxo do programa
-
-```
-main()
- └── loop eterno
-      ├── Menu.executar()   → aguarda ESPAÇO
-      └── Jogo.executar()   → roda até alguém vencer, depois volta ao menu
-```
