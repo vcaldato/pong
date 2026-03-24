@@ -12,12 +12,10 @@ from constants import (
 
 
 def _gerar_som(frequencia, duracao_ms):
-    """Gera um bip simples com a frequência e duração informadas."""
     n = int(AUDIO_FREQUENCIA * duracao_ms / 1000)
     t = np.linspace(0, duracao_ms / 1000, n, endpoint=False)
     onda = np.sin(2 * np.pi * frequencia * t).astype(np.float32)
 
-    # Fade-out para evitar clique no fim do som
     fade = int(n * 0.3)
     onda[-fade:] *= np.linspace(1, 0, fade)
 
@@ -27,7 +25,6 @@ def _gerar_som(frequencia, duracao_ms):
 
 
 def _gerar_ponto():
-    """Gera três notas ascendentes para indicar que um ponto foi marcado."""
     taxa = AUDIO_FREQUENCIA
     notas = [(523, 80), (659, 80), (784, 160)]  # C5, E5, G5
     partes = []
@@ -48,7 +45,6 @@ def _gerar_ponto():
 
 
 def inicializar():
-    """Inicializa o mixer e retorna um dicionário com todos os sons prontos."""
     pygame.mixer.init(
         frequency=AUDIO_FREQUENCIA,
         size=AUDIO_TAMANHO,

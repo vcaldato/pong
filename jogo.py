@@ -92,7 +92,6 @@ class Jogo:
             self._bola.rebater_horizontal(para_direita=False)
             self._sons["raquete"].play()
 
-        # Detecta rebote na parede pela inversão do vy
         if self._bola.vy != vy_antes:
             self._sons["parede"].play()
 
