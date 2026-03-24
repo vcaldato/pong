@@ -33,3 +33,7 @@ AUDIO_BUFFER: int = 512
  
 VOLUME_EFEITOS: float = 0.6
 VOLUME_MUSICA: float = 0.25
+
+BOLA_VARIACAO_ANGULO: int = 3   
+BOLA_VY_MINIMO: int = 2         
+BOLA_VY_MAXIMO: int = 8         
