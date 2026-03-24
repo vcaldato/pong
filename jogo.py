@@ -51,8 +51,10 @@ class Jogo:
         )
 
     def executar(self) -> None:
-        self._sons["musica"].set_volume(VOLUME_MUSICA)
-        self._sons["musica"].play(loops=-1, fade_ms=500)
+        # Inicia a música de fundo em loop
+        pygame.mixer.music.load("vamo_gremio.mp3")
+        pygame.mixer.music.set_volume(VOLUME_MUSICA)
+        pygame.mixer.music.play(loops=-1)
 
         while True:
             self._processar_eventos()
@@ -65,7 +67,7 @@ class Jogo:
             self._verificar_colisoes(vy_antes)
 
             if self._verificar_pontuacao():
-                self._sons["musica"].stop()
+                pygame.mixer.music.stop()
                 return
 
             self._renderer.renderizar()
@@ -90,6 +92,7 @@ class Jogo:
             self._bola.rebater_horizontal(para_direita=False)
             self._sons["raquete"].play()
 
+        # Detecta rebote na parede pela inversão do vy
         if self._bola.vy != vy_antes:
             self._sons["parede"].play()
 
