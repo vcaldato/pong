@@ -1,16 +1,4 @@
-"""
-constants.py
-============
-Centraliza todas as constantes do jogo Pong.
 
-Seguindo o princípio da responsabilidade única (SRP), este módulo
-existe apenas para declarar valores fixos usados em todo o projeto,
-facilitando ajustes sem necessidade de rastrear o código inteiro.
-"""
-
-# ---------------------------------------------------------------------------
-# Tela
-# ---------------------------------------------------------------------------
 LARGURA: int = 800
 ALTURA: int = 600
 FPS: int = 60

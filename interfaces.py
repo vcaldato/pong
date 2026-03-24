@@ -1,20 +1,3 @@
-"""
-interfaces.py
-=============
-Define as interfaces (protocolos) do jogo Pong.
-
-Aplicando os princípios de Interface Segregation (ISP) e Dependency
-Inversion (DIP) do SOLID:
-
-- As classes de alto nível (Jogo, Menu) dependem dessas abstrações,
-  não de implementações concretas.
-- Cada protocolo declara apenas o contrato mínimo necessário para
-  o papel que representa.
-
-Uso de ``typing.Protocol`` (Python 3.8+) permite duck-typing estrutural:
-qualquer classe que implemente os métodos exigidos satisfaz a interface,
-sem herança explícita.
-"""
 
 from __future__ import annotations
 
@@ -68,12 +51,7 @@ class Controlavel(Protocol):
 
 
 class Cena(Protocol):
-    """
-    Interface para qualquer cena do jogo (Menu, Partida, Tela de Fim).
 
-    Segue o padrão *Game State* / *Scene*: cada tela encapsula seu
-    próprio loop e devolve controle ao gerenciador ao terminar.
-    """
 
     def executar(self) -> None:
         """Executa o loop desta cena até que ela decida terminar."""

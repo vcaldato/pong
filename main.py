@@ -1,16 +1,3 @@
-"""
-main.py
-=======
-Ponto de entrada do jogo Pong refatorado.
-
-Responsabilidades
------------------
-- Inicializar o pygame.
-- Criar a janela.
-- Orquestrar o ciclo de vida: Menu → Jogo → Menu → Jogo …
-
-Este módulo é intencionalmente mínimo — toda a lógica fica nas cenas.
-"""
 
 import pygame
 
