@@ -1,5 +1,3 @@
-
-
 from __future__ import annotations
 
 import sys
@@ -15,6 +13,7 @@ from constants import (
     RAQUETE_ALTURA,
     RAQUETE_LARGURA,
     RAQUETE_MARGEM,
+    VOLUME_MUSICA,
 )
 from input_handler import InputHandler
 from placar import Placar
@@ -23,13 +22,12 @@ from renderer import Renderer
 
 
 class Jogo:
-  
 
-    def __init__(self, tela: pygame.Surface) -> None:
+    def __init__(self, tela: pygame.Surface, sons: dict) -> None:
         self._tela = tela
         self._clock = pygame.time.Clock()
+        self._sons = sons
 
-        # --- Entidades ------------------------------------------------
         self._player1 = Raquete(
             x=RAQUETE_MARGEM,
             y=ALTURA // 2 - RAQUETE_ALTURA // 2,
@@ -45,7 +43,6 @@ class Jogo:
         self._bola = Bola(LARGURA, ALTURA)
         self._placar = Placar()
 
-        # --- Serviços -------------------------------------------------
         self._input = InputHandler(self._player1)
         self._ia = IASimples()
         self._renderer = Renderer(
@@ -53,47 +50,57 @@ class Jogo:
             [self._player1, self._player2, self._bola, self._placar],
         )
 
-
     def executar(self) -> None:
-     
+        self._sons["musica"].set_volume(VOLUME_MUSICA)
+        self._sons["musica"].play(loops=-1, fade_ms=500)
+
         while True:
             self._processar_eventos()
             self._input.processar()
             self._atualizar_ia()
+
+            vy_antes = self._bola.vy
             self._bola.mover()
-            self._verificar_colisoes()
+
+            self._verificar_colisoes(vy_antes)
+
             if self._verificar_pontuacao():
-                return  # devolve controle ao Menu
+                self._sons["musica"].stop()
+                return
+
             self._renderer.renderizar()
             self._clock.tick(FPS)
 
-
     def _processar_eventos(self) -> None:
-        """Encerra o processo se o usuário fechar a janela."""
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
     def _atualizar_ia(self) -> None:
-    
         bola_x, bola_y = self._bola.posicao()
         self._player2.mover_com_ia(bola_x, bola_y, self._ia)
 
-    def _verificar_colisoes(self) -> None:
-      
+    def _verificar_colisoes(self, vy_antes: int) -> None:
         if self._bola.rect().colliderect(self._player1.rect()):
             self._bola.rebater_horizontal(para_direita=True)
+            self._sons["raquete"].play()
+
         if self._bola.rect().colliderect(self._player2.rect()):
             self._bola.rebater_horizontal(para_direita=False)
+            self._sons["raquete"].play()
+
+        if self._bola.vy != vy_antes:
+            self._sons["parede"].play()
 
     def _verificar_pontuacao(self) -> bool:
-    
         if self._bola.saiu_pela_esquerda():
             self._placar.ponto_player2()
+            self._sons["ponto"].play()
             self._bola.reset()
         elif self._bola.saiu_pela_direita():
             self._placar.ponto_player1()
+            self._sons["ponto"].play()
             self._bola.reset()
 
         return self._placar.alguem_venceu()
