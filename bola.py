@@ -20,10 +20,18 @@ from constants import (
 
 class Bola:
 
-    def __init__(self, largura_tela: int = LARGURA, altura_tela: int = ALTURA) -> None:
+    def __init__(
+        self,
+        largura_tela: int = LARGURA,
+        altura_tela: int = ALTURA,
+        cor=BRANCO,
+        verdadeira: bool = True,
+    ) -> None:
         self._largura_tela = largura_tela
         self._altura_tela = altura_tela
         self.tamanho = BOLA_TAMANHO
+        self.cor = cor
+        self.verdadeira = verdadeira  # só a bola verdadeira pode pontuar
         self.vx: int = 0
         self.vy: int = 0
         self.x: int = 0
@@ -43,7 +51,13 @@ class Bola:
         self.x += self.vx
         self.y += self.vy
 
-        if self.y <= 0 or self.y >= self._altura_tela - self.tamanho:
+        # Rebote na borda superior e inferior com variação de ângulo
+        if self.y <= 0:
+            self.y = 0  # reposiciona para fora da borda antes de inverter
+            self.vy = -self.vy
+            self._variar_angulo()
+        elif self.y >= self._altura_tela - self.tamanho:
+            self.y = self._altura_tela - self.tamanho
             self.vy = -self.vy
             self._variar_angulo()
 
@@ -52,10 +66,12 @@ class Bola:
         self._variar_angulo()
 
     def _variar_angulo(self) -> None:
- 
+        """Aplica uma variação aleatória no vy para tornar o rebote imprevisível."""
         variacao = random.randint(-BOLA_VARIACAO_ANGULO, BOLA_VARIACAO_ANGULO)
         novo_vy = self.vy + variacao
 
+        # Garante que o vy nunca fique baixo demais (bola quase horizontal)
+        # nem alto demais (bola quase vertical), mantendo o jogo equilibrado
         sinal = 1 if novo_vy >= 0 else -1
         self.vy = sinal * max(BOLA_VY_MINIMO, min(abs(novo_vy), BOLA_VY_MAXIMO))
 
@@ -69,4 +85,4 @@ class Bola:
         return pygame.Rect(self.x, self.y, self.tamanho, self.tamanho)
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        pygame.draw.circle(tela, BRANCO, (self.x, self.y), self.tamanho)
+        pygame.draw.circle(tela, self.cor, (self.x, self.y), self.tamanho)

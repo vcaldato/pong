@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import Protocol
@@ -27,6 +26,8 @@ class EstrategiaIA(Protocol):
 class IASimples:
 
 
+    ZONA_MORTA = 4  # pixels de tolerância antes de a IA se mover
+
     def calcular_movimento(
         self,
         raquete_y: int,
@@ -35,11 +36,12 @@ class IASimples:
         bola_y: float,
     ) -> int:
         centro = raquete_y + raquete_altura // 2
-        if centro < bola_y:
+        diferenca = bola_y - centro
+        if diferenca > self.ZONA_MORTA:
             return 1    # mover para baixo
-        if centro > bola_y:
+        if diferenca < -self.ZONA_MORTA:
             return -1   # mover para cima
-        return 0        # parado
+        return 0        # dentro da zona morta — parado
 
 
 class Raquete:

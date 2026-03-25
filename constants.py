@@ -37,3 +37,6 @@ VOLUME_MUSICA: float = 0.25
 BOLA_VARIACAO_ANGULO: int = 3   
 BOLA_VY_MINIMO: int = 2         
 BOLA_VY_MAXIMO: int = 8         
+
+POWERUP_INTERVALO_MS: int = 5000  
+POWERUP_TOTAL_BOLAS: int = 4
